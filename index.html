@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI 웹앱</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Noto Sans KR", Arial, sans-serif;
+      background: linear-gradient(180deg, #f6f8fc 0%, #eef3ff 100%);
+      color: #1f2937;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #1e293b 0%, #2563eb 55%, #60a5fa 100%);
+      color: white;
+      padding: 72px 24px 56px;
+    }
+
+    .hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      font-size: 14px;
+      margin-bottom: 18px;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-size: 52px;
+      line-height: 1.15;
+      font-weight: 800;
+    }
+
+    .hero p {
+      margin-top: 16px;
+      max-width: 780px;
+      font-size: 18px;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.92);
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: -26px auto 48px;
+      padding: 0 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.05fr 1.2fr;
+      gap: 24px;
+      align-items: start;
+    }
+
+    .card {
+      background: rgba(255,255,255,0.88);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.6);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(31, 41, 55, 0.10);
+      padding: 26px;
+    }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 24px;
+      font-weight: 800;
+      color: #111827;
+    }
+
+    .desc {
+      line-height: 1.8;
+      font-size: 16px;
+      color: #374151;
+    }
+
+    .mini-list {
+      margin: 18px 0 0;
+      padding-left: 18px;
+      color: #374151;
+      line-height: 1.8;
+    }
+
+    .info-box {
+      margin-top: 18px;
+      padding: 16px 18px;
+      border-radius: 16px;
+      background: #eef4ff;
+      border: 1px solid #dbeafe;
+      line-height: 1.8;
+      font-size: 15px;
+      color: #1e3a8a;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    button, .upload-label {
+      border: none;
+      border-radius: 14px;
+      padding: 14px 18px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: 0.2s ease;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, 0.28);
+    }
+
+    .primary-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .secondary-btn {
+      background: #e5eefc;
+      color: #1d4ed8;
+    }
+
+    .secondary-btn:hover {
+      background: #dbeafe;
+    }
+
+    .upload-label {
+      background: #111827;
+      color: white;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .upload-label:hover {
+      background: #1f2937;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .viewer-card {
+      padding: 18px;
+      background: #f8fbff;
+      border-radius: 22px;
+      border: 1px solid #dbeafe;
+    }
+
+    .viewer-area {
+      min-height: 360px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 18px;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(37,99,235,0.08), rgba(96,165,250,0.10));
+      border: 2px dashed #bfdbfe;
+      padding: 14px;
+    }
+
+    #webcam-container canvas,
+    #image-preview {
+      max-width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+    }
+
+    #image-preview {
+      display: none;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .result-top {
+      margin-top: 10px;
+      font-size: 28px;
+      font-weight: 800;
+      color: #111827;
+    }
+
+    .result-sub {
+      margin-top: 6px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    .result-list {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .result-item {
+      background: #f9fbff;
+      border: 1px solid #e5edff;
+      border-radius: 16px;
+      padding: 14px;
+    }
+
+    .label-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 8px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .bar-bg {
+      width: 100%;
+      height: 14px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .bar {
+      width: 0%;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #2563eb, #60a5fa);
+      transition: width 0.3s ease;
+    }
+
+    .footer {
+      max-width: 1100px;
+      margin: 0 auto 40px;
+      padding: 0 20px;
+      color: #6b7280;
+      font-size: 14px;
+      text-align: center;
+    }
+
+    @media (max-width: 920px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .hero h1 {
+        font-size: 38px;
+      }
+
+      .viewer-area {
+        min-height: 300px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="badge">AI 이미지 분류 프로젝트</div>
+      <h1 id="app-title">과일 이미지 분류기</h1>
+      <p id="app-subtitle">
+        웹캠과 이미지 업로드 기능을 통해 과일 사진을 분석하고,
+        어떤 과일인지 예측 결과를 보여주는 AI 웹앱입니다.
+      </p>
+    </div>
+  </section>
+
+  <main class="container">
+    <div class="grid">
+      <section class="card">
+        <h2 class="section-title">프로젝트 소개</h2>
+        <div class="desc" id="app-description">
+          이 웹앱은 Teachable Machine으로 학습한 이미지 분류 모델을 활용하여
+          사용자가 웹캠 또는 업로드한 이미지를 분석할 수 있도록 만든 서비스입니다.
+        </div>
+
+        <ul class="mini-list">
+          <li>웹캠으로 실시간 분류 가능</li>
+          <li>이미지 업로드로 정적 사진 분류 가능</li>
+          <li>예측 결과를 확률과 함께 시각적으로 확인 가능</li>
+        </ul>
+
+        <div class="info-box">
+          <strong>사용 방법</strong><br>
+          1. <strong>웹캠 시작</strong> 버튼을 눌러 실시간으로 분류합니다.<br>
+          2. 또는 <strong>이미지 업로드</strong> 버튼으로 사진을 넣어 분석합니다.<br>
+          3. 오른쪽 결과 영역에서 가장 높은 예측값과 전체 확률을 확인합니다.
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 class="section-title">AI 분류 실행</h2>
+
+        <div class="controls">
+          <button class="primary-btn" id="start-webcam-btn">웹캠 시작</button>
+          <button class="secondary-btn" id="stop-webcam-btn">웹캠 종료</button>
+          <label class="upload-label" for="image-upload">이미지 업로드</label>
+          <input type="file" id="image-upload" accept="image/*" />
+        </div>
+
+        <div class="viewer-card">
+          <div class="viewer-area">
+            <div id="webcam-container"></div>
+            <img id="image-preview" alt="업로드 이미지 미리보기" />
+          </div>
+          <div class="status" id="status">모델을 불러오는 중입니다...</div>
+        </div>
+
+        <div class="result-top" id="top-result">아직 결과가 없습니다.</div>
+        <div class="result-sub">가장 높은 확률의 예측 결과가 여기에 표시됩니다.</div>
+        <div class="result-list" id="result-list"></div>
+      </section>
+    </div>
+  </main>
+
+  <div class="footer" id="team-name">
+    제작 팀: 2-2 1조
+  </div>
+
+  <script>
+    // =========================
+    // 학생들이 고칠 부분
+    // =========================
+    const APP_TITLE = "선생님 필기 분류기";
+    const APP_SUBTITLE = "중국어 선생님들과 국어 선생님들의 필기를 분류하고, 어떤 선생님의 필기인지 예측 결과를 보여주는 AI 웹앱입니다.";
+    const APP_DESCRIPTION = "이 웹앱은 Teachable Machine으로 학습한 이미지 분류 모델을 활용하여 사용자가 웹캠 또는 업로드한 이미지를 분석할 수 있도록 만든 서비스입니다.";
+    const TEAM_NAME = "제작 팀: 2-2 <히읗히읗>조";
+    const MODEL_URL = "https://teachablemachine.withgoogle.com/models/6Yp976ACB/";
+
+    // =========================
+    // 아래는 수정하지 않기
+    // =========================
+    let model, webcam;
+    let isWebcamRunning = false;
+    let animationId = null;
+
+    const webcamContainer = document.getElementById("webcam-container");
+    const imagePreview = document.getElementById("image-preview");
+    const statusEl = document.getElementById("status");
+    const resultListEl = document.getElementById("result-list");
+    const topResultEl = document.getElementById("top-result");
+    const imageUploadEl = document.getElementById("image-upload");
+
+    document.getElementById("app-title").textContent = APP_TITLE;
+    document.getElementById("app-subtitle").textContent = APP_SUBTITLE;
+    document.getElementById("app-description").textContent = APP_DESCRIPTION;
+    document.getElementById("team-name").textContent = TEAM_NAME;
+    document.title = APP_TITLE;
+
+    async function loadModel() {
+      const modelURL = MODEL_URL + "model.json";
+      const metadataURL = MODEL_URL + "metadata.json";
+      model = await tmImage.load(modelURL, metadataURL);
+      renderEmptyBars();
+      statusEl.textContent = "모델 준비 완료! 웹캠을 시작하거나 이미지를 업로드하세요.";
+    }
+
+    function safeId(text) {
+      return text.replace(/[^a-zA-Z0-9가-힣_-]/g, "_");
+    }
+
+    function renderEmptyBars() {
+      resultListEl.innerHTML = "";
+      const classLabels = model.getClassLabels();
+
+      classLabels.forEach((label) => {
+        const id = safeId(label);
+        const item = document.createElement("div");
+        item.className = "result-item";
+        item.innerHTML = `
+          <div class="label-row">
+            <span>${label}</span>
+            <span id="percent-${id}">0%</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar" id="bar-${id}"></div>
+          </div>
+        `;
+        resultListEl.appendChild(item);
+      });
+    }
+
+    async function startWebcam() {
+      try {
+        stopWebcamOnly();
+
+        imagePreview.style.display = "none";
+        webcamContainer.innerHTML = "";
+
+        webcam = new tmImage.Webcam(420, 320, true);
+        await webcam.setup();
+        await webcam.play();
+
+        isWebcamRunning = true;
+        webcamContainer.appendChild(webcam.canvas);
+        statusEl.textContent = "웹캠이 실행되었습니다. 화면에 대상을 비춰보세요.";
+
+        loop();
+      } catch (error) {
+        console.error(error);
+        statusEl.textContent = "웹캠을 열 수 없습니다. 브라우저에서 카메라 권한을 허용했는지 확인하세요.";
+      }
+    }
+
+    async function loop() {
+      if (!isWebcamRunning || !webcam) return;
+      webcam.update();
+      await predictWebcam();
+      animationId = requestAnimationFrame(loop);
+    }
+
+    async function predictWebcam() {
+      const predictions = await model.predict(webcam.canvas);
+      updatePredictionUI(predictions);
+    }
+
+    async function handleImageUpload(event) {
+      stopWebcam();
+
+      const file = event.target.files[0];
+      if (!file) return;
+
+      imagePreview.src = URL.createObjectURL(file);
+      imagePreview.style.display = "block";
+
+      imagePreview.onload = async () => {
+        statusEl.textContent = "업로드한 이미지를 분석했습니다.";
+        const predictions = await model.predict(imagePreview);
+        updatePredictionUI(predictions);
+      };
+    }
+
+    function updatePredictionUI(predictions) {
+      predictions.sort((a, b) => b.probability - a.probability);
+
+      const best = predictions[0];
+      topResultEl.textContent = `${best.className} (${(best.probability * 100).toFixed(1)}%)`;
+
+      predictions.forEach((prediction) => {
+        const id = safeId(prediction.className);
+        const percent = (prediction.probability * 100).toFixed(1);
+
+        const bar = document.getElementById(`bar-${id}`);
+        const percentText = document.getElementById(`percent-${id}`);
+
+        if (bar) bar.style.width = `${percent}%`;
+        if (percentText) percentText.textContent = `${percent}%`;
+      });
+    }
+
+    function stopWebcamOnly() {
+      if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+      }
+
+      isWebcamRunning = false;
+
+      if (webcam) {
+        webcam.stop();
+        webcam = null;
+      }
+    }
+
+    function stopWebcam() {
+      stopWebcamOnly();
+      webcamContainer.innerHTML = "";
+    }
+
+    document.getElementById("start-webcam-btn").addEventListener("click", startWebcam);
+    document.getElementById("stop-webcam-btn").addEventListener("click", () => {
+      stopWebcam();
+      statusEl.textContent = "웹캠을 종료했습니다.";
+    });
+    imageUploadEl.addEventListener("change", handleImageUpload);
+
+    loadModel().catch((error) => {
+      console.error(error);
+      statusEl.textContent = "모델을 불러오지 못했습니다. 모델 URL을 확인하세요.";
+    });
+  </script>
+</body>
+</html>
